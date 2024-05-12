@@ -1,0 +1,10 @@
+{
+  "Name": "StardewCompletionist",
+  "Author": "Nate Sauber",
+  "Version": "1.0.0",
+  "Description": "Helps find all the things you've unlocked but haven't done yet.",
+  "UniqueID": "nsauber.StardewCompletionist",
+  "EntryDll": "StardewCompletionist.dll",
+  "MinimumApiVersion": "3.0.0",
+  "UpdateKeys": []
+}
