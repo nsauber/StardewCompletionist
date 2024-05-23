@@ -18,11 +18,122 @@ namespace StardewCompletionist;
 
 public class MyQuestLog : IClickableMenu
 {
-    public const int questsPerPage = 6;
-    protected List<List<IQuest>> pages;
-    protected int currentPage;
+    #region QuestPageManager    
+
+    private List<IQuest> GetCurrentPage()
+    {
+        return this.pages[this.currentPage];
+    }
+
+    private bool IsOnLastPage()
+    {
+        return this.currentPage == this.pages.Count - 1;
+    }
+
+    private bool IsNotOnLastPage()
+    {
+        return this.currentPage < this.pages.Count - 1;
+    }
+
+    private bool IsOnFirstPage()
+    {
+        return this.currentPage == 0;
+    }
+
+    private bool IsNotOnFirstPage()
+    {
+        return this.currentPage > 0;
+    }
+
+    private bool HasAnyPages()
+    {
+        return this.pages.Count > 0;
+    }
+
+    private int NumberOfQuestsOnFirstPage()
+    {
+        return this.pages[0].Count;
+    }
+
+    private void MoveToNextPage()
+    {
+        this.currentPage++;
+    }
+
+    private void MoveToPreviousPage()
+    {
+        this.currentPage--;
+    }
+
+
+    public const int questsPerPage = 6; // unused?
+
+    protected List<List<IQuest>> pages; // SAFE TO MOVE
+    protected int currentPage; // SAFE TO MOVE
     protected int questPage = -1;
-    
+
+    /// <summary>Get the paginated list of quests which should be shown in the quest log.</summary>
+    protected virtual void paginateQuests()
+    {
+        this.pages = new List<List<IQuest>>();
+        IList<IQuest> quests = this.GetAllQuests();
+        int startIndex = 0;
+        while (startIndex < quests.Count)
+        {
+            List<IQuest> page = new List<IQuest>();
+            for (int i = 0; i < 6; i++)
+            {
+                if (startIndex >= quests.Count)
+                {
+                    break;
+                }
+                page.Add(quests[startIndex]);
+                startIndex++;
+            }
+            this.pages.Add(page);
+        }
+        if (this.pages.Count == 0)
+        {
+            this.pages.Add(new List<IQuest>());
+        }
+
+        this.currentPage = Utility.Clamp(this.currentPage, 0, this.pages.Count - 1);
+
+        this.questPage = -1;
+    }
+
+    /// <summary>Get the quests which should be shown in the quest log.</summary>
+    protected virtual IList<IQuest> GetAllQuests()
+    {
+        List<IQuest> quests = new List<IQuest>();
+        for (int j = Game1.player.team.specialOrders.Count - 1; j >= 0; j--)
+        {
+            SpecialOrder order = Game1.player.team.specialOrders[j];
+            if (!order.IsHidden())
+            {
+                quests.Add(order);
+            }
+        }
+        for (int i = Game1.player.questLog.Count - 1; i >= 0; i--)
+        {
+            Quest quest = Game1.player.questLog[i];
+            if (quest == null || (bool)quest.destroy)
+            {
+                Game1.player.questLog.RemoveAt(i);
+            }
+            else if (!quest.IsHidden())
+            {
+                quests.Add(quest);
+            }
+        }
+        return quests;
+    }
+
+    #endregion
+
+
+
+
     public List<ClickableComponent> questLogButtons;
 
     public const int region_forwardButton = 101;
@@ -124,20 +235,20 @@ public class MyQuestLog : IClickableMenu
             switch (direction)
             {
                 case 2:
-                    if (oldID < 5 && this.pages[this.currentPage].Count - 1 > oldID)
+                    if (oldID < 5 && GetCurrentPage().Count - 1 > oldID)
                     {
                         base.currentlySnappedComponent = base.getComponentWithID(oldID + 1);
                     }
                     break;
                 case 1:
-                    if (this.currentPage < this.pages.Count - 1)
+                    if (IsNotOnLastPage())
                     {
                         base.currentlySnappedComponent = base.getComponentWithID(101);
                         base.currentlySnappedComponent.leftNeighborID = oldID;
                     }
                     break;
                 case 3:
-                    if (this.currentPage > 0)
+                    if (IsNotOnFirstPage())
                     {
                         base.currentlySnappedComponent = base.getComponentWithID(102);
                         base.currentlySnappedComponent.rightNeighborID = oldID;
@@ -167,13 +278,13 @@ public class MyQuestLog : IClickableMenu
         switch (b)
         {
             case Buttons.RightTrigger:
-                if (this.questPage == -1 && this.currentPage < this.pages.Count - 1)
+                if (this.questPage == -1 && IsNotOnLastPage())
                 {
                     this.nonQuestPageForwardButton();
                 }
                 break;
             case Buttons.LeftTrigger:
-                if (this.questPage == -1 && this.currentPage > 0)
+                if (this.questPage == -1 && IsNotOnFirstPage())
                 {
                     this.nonQuestPageBackButton();
                 }
@@ -184,62 +295,8 @@ public class MyQuestLog : IClickableMenu
 
 
 
-    /// <summary>Get the paginated list of quests which should be shown in the quest log.</summary>
-    protected virtual void paginateQuests()
-    {
-        this.pages = new List<List<IQuest>>();
-        IList<IQuest> quests = this.GetAllQuests();
-        int startIndex = 0;
-        while (startIndex < quests.Count)
-        {
-            List<IQuest> page = new List<IQuest>();
-            for (int i = 0; i < 6; i++)
-            {
-                if (startIndex >= quests.Count)
-                {
-                    break;
-                }
-                page.Add(quests[startIndex]);
-                startIndex++;
-            }
-            this.pages.Add(page);
-        }
-        if (this.pages.Count == 0)
-        {
-            this.pages.Add(new List<IQuest>());
-        }
 
-        this.currentPage = Utility.Clamp(this.currentPage, 0, this.pages.Count - 1);
 
-        this.questPage = -1;
-    }
-
-    /// <summary>Get the quests which should be shown in the quest log.</summary>
-    protected virtual IList<IQuest> GetAllQuests()
-    {
-        List<IQuest> quests = new List<IQuest>();
-        for (int j = Game1.player.team.specialOrders.Count - 1; j >= 0; j--)
-        {
-            SpecialOrder order = Game1.player.team.specialOrders[j];
-            if (!order.IsHidden())
-            {
-                quests.Add(order);
-            }
-        }
-        for (int i = Game1.player.questLog.Count - 1; i >= 0; i--)
-        {
-            Quest quest = Game1.player.questLog[i];
-            if (quest == null || (bool)quest.destroy)
-            {
-                Game1.player.questLog.RemoveAt(i);
-            }
-            else if (!quest.IsHidden())
-            {
-                quests.Add(quest);
-            }
-        }
-        return quests;
-    }
 
     public bool NeedsScroll()
     {
@@ -253,9 +310,6 @@ public class MyQuestLog : IClickableMenu
         }
         return false;
     }
-
-
-
 
     public override void receiveScrollWheelAction(int direction)
     {
@@ -292,7 +346,7 @@ public class MyQuestLog : IClickableMenu
         {
             for (int i = 0; i < this.questLogButtons.Count; i++)
             {
-                if (this.pages.Count > 0 && this.pages[0].Count > i && this.questLogButtons[i].containsPoint(x, y) && !this.questLogButtons[i].containsPoint(Game1.getOldMouseX(), Game1.getOldMouseY()))
+                if (HasAnyPages() && NumberOfQuestsOnFirstPage() > i && this.questLogButtons[i].containsPoint(x, y) && !this.questLogButtons[i].containsPoint(Game1.getOldMouseX(), Game1.getOldMouseY()))
                 {
                     Game1.playSound("Cowboy_gunshot");
                 }
@@ -335,9 +389,9 @@ public class MyQuestLog : IClickableMenu
 
     private void nonQuestPageForwardButton()
     {
-        this.currentPage++;
+        MoveToNextPage();
         Game1.playSound("shwip");
-        if (Game1.options.SnappyMenus && this.currentPage == this.pages.Count - 1)
+        if (Game1.options.SnappyMenus && IsOnLastPage())
         {
             base.currentlySnappedComponent = base.getComponentWithID(0);
             this.snapCursorToCurrentSnappedComponent();
@@ -346,16 +400,14 @@ public class MyQuestLog : IClickableMenu
 
     private void nonQuestPageBackButton()
     {
-        this.currentPage--;
+        MoveToPreviousPage();
         Game1.playSound("shwip");
-        if (Game1.options.SnappyMenus && this.currentPage == 0)
+        if (Game1.options.SnappyMenus && IsOnFirstPage())
         {
             base.currentlySnappedComponent = base.getComponentWithID(0);
             this.snapCursorToCurrentSnappedComponent();
         }
     }
-
-
 
 
     public override void leftClickHeld(int x, int y)
@@ -460,11 +512,11 @@ public class MyQuestLog : IClickableMenu
         {
             for (int i = 0; i < this.questLogButtons.Count; i++)
             {
-                if (this.pages.Count > 0 && this.pages[this.currentPage].Count > i && this.questLogButtons[i].containsPoint(x, y))
+                if (HasAnyPages() && GetCurrentPage().Count > i && this.questLogButtons[i].containsPoint(x, y))
                 {
                     Game1.playSound("smallSelect");
                     this.questPage = i;
-                    this._shownQuest = this.pages[this.currentPage][i];
+                    this._shownQuest = GetCurrentPage()[i];
                     this._objectiveText = this._shownQuest.GetObjectiveDescriptions();
                     this._shownQuest.MarkAsViewed();
                     this.scrollAmount = 0f;
@@ -479,12 +531,12 @@ public class MyQuestLog : IClickableMenu
                     return;
                 }
             }
-            if (this.currentPage < this.pages.Count - 1 && this.forwardButton.containsPoint(x, y))
+            if (IsNotOnLastPage() && this.forwardButton.containsPoint(x, y))
             {
                 this.nonQuestPageForwardButton();
                 return;
             }
-            if (this.currentPage > 0 && this.backButton.containsPoint(x, y))
+            if (IsNotOnFirstPage() && this.backButton.containsPoint(x, y))
             {
                 this.nonQuestPageBackButton();
                 return;
@@ -509,10 +561,10 @@ public class MyQuestLog : IClickableMenu
                 Game1.player.acceptedDailyQuest.Set(newValue: false);
             }
             Game1.player.questLog.Remove(quest);
-            this.pages[this.currentPage].RemoveAt(this.questPage);
+            GetCurrentPage().RemoveAt(this.questPage);
             this.questPage = -1;
             Game1.playSound("trashcan");
-            if (Game1.options.SnappyMenus && this.currentPage == 0)
+            if (Game1.options.SnappyMenus && IsOnFirstPage())
             {
                 base.currentlySnappedComponent = base.getComponentWithID(0);
                 this.snapCursorToCurrentSnappedComponent();
@@ -565,7 +617,7 @@ public class MyQuestLog : IClickableMenu
     {
         if (this._shownQuest.OnLeaveQuestPage())
         {
-            this.pages[this.currentPage].RemoveAt(this.questPage);
+            GetCurrentPage().RemoveAt(this.questPage);
         }
         this.questPage = -1;
         this.paginateQuests();
@@ -631,10 +683,10 @@ public class MyQuestLog : IClickableMenu
 
         for (int i = 0; i < this.questLogButtons.Count; i++)
         {            
-            if (this.pages.Count > 0 && this.pages[this.currentPage].Count > i)
+            if (HasAnyPages() && GetCurrentPage().Count > i)
             {
                 var currentQuestLogButton = this.questLogButtons[i];
-                var currentQuest = this.pages[this.currentPage][i];
+                var currentQuest = GetCurrentPage()[i];
                 DrawQuestsListEntry(b, currentQuestLogButton, currentQuest);
             }
         }
@@ -699,7 +751,7 @@ public class MyQuestLog : IClickableMenu
                 extraYOffset = 48f;
             }
             Utility.drawWithShadow(b, Game1.mouseCursors, new Vector2(base.xPositionOnScreen + xOffset + 32, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), new Rectangle(410, 501, 9, 9), Color.White, 0f, Vector2.Zero, 4f, flipped: false, 0.99f);
-            Utility.drawTextWithShadow(b, Game1.parseText((this.pages[this.currentPage][this.questPage].GetDaysLeft() > 1) ? Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11374", this.pages[this.currentPage][this.questPage].GetDaysLeft()) : Game1.content.LoadString("Strings\\StringsFromCSFiles:Quest_FinalDay"), Game1.dialogueFont, base.width - 128), Game1.dialogueFont, new Vector2(base.xPositionOnScreen + xOffset + 80, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), Game1.textColor);
+            Utility.drawTextWithShadow(b, Game1.parseText((GetCurrentPage()[this.questPage].GetDaysLeft() > 1) ? Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11374", GetCurrentPage()[this.questPage].GetDaysLeft()) : Game1.content.LoadString("Strings\\StringsFromCSFiles:Quest_FinalDay"), Game1.dialogueFont, base.width - 128), Game1.dialogueFont, new Vector2(base.xPositionOnScreen + xOffset + 80, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), Game1.textColor);
         }
         string description = Game1.parseText(this._shownQuest.GetDescription(), Game1.dialogueFont, base.width - 128);
         Rectangle cached_scissor_rect = b.GraphicsDevice.ScissorRectangle;
@@ -837,11 +889,11 @@ public class MyQuestLog : IClickableMenu
 
     private void DrawForwardBackButtonsIfNeeded(SpriteBatch b)
     {
-        if (this.currentPage < this.pages.Count - 1 && this.questPage == -1)
+        if (IsNotOnLastPage() && this.questPage == -1)
         {
             this.forwardButton.draw(b);
         }
-        if (this.currentPage > 0 || this.questPage != -1)
+        if (IsNotOnFirstPage() || this.questPage != -1)
         {
             this.backButton.draw(b);
         }
