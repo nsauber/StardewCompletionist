@@ -18,108 +18,20 @@ namespace StardewCompletionist;
 
 public class MyQuestLog : IClickableMenu
 {
-
-    public readonly QuestPageManager _questPageManager = new QuestPageManager();
-
+    public readonly QuestPageManager _questPageManager = new();
     public class QuestPageManager
     {
-        public bool IsNotCurrentQuestOnPageSet()
-        {
-            return this.questPage == -1;
-        }
-
-        public bool IsCurrentQuestOnPageSet()
-        {
-            return this.questPage != -1;
-        }
-
-        public void ClearCurrentQuestOnPage()
-        {
-            this.questPage = -1;
-        }
-
-        public void SetCurrentQuestOnPage(int i)
-        {
-            this.questPage = i;
-        }
-
-        public IQuest GetCurrentQuestOnPage()
-        {
-            return GetCurrentPage()[this.questPage];
-        }
-
-        public void RemoveCurrentQuestOnPage()
-        {
-            GetCurrentPage().RemoveAt(this.questPage);
-        }
-
-
-
-
-
-
-
-        public List<IQuest> GetCurrentPage()
-        {
-            return this.pages[this.currentPage];
-        }
-
-        public bool IsOnLastPage()
-        {
-            return this.currentPage == this.pages.Count - 1;
-        }
-
-        public bool IsNotOnLastPage()
-        {
-            return this.currentPage < this.pages.Count - 1;
-        }
-
-        public bool IsOnFirstPage()
-        {
-            return this.currentPage == 0;
-        }
-
-        public bool IsNotOnFirstPage()
-        {
-            return this.currentPage > 0;
-        }
-
-        public bool HasAnyPages()
-        {
-            return this.pages.Count > 0;
-        }
-
-        public int NumberOfQuestsOnFirstPage()
-        {
-            return this.pages[0].Count;
-        }
-
-        public void MoveToNextPage()
-        {
-            this.currentPage++;
-        }
-
-        public void MoveToPreviousPage()
-        {
-            this.currentPage--;
-        }
-
-
-        public const int questsPerPage = 6; // unused?
-
-        protected List<List<IQuest>> pages; // SAFE TO MOVE
-        protected int currentPage; // SAFE TO MOVE
-        protected int questPage = -1; // SAFE TO MOVE
+        protected List<List<IQuest>> _pages = new();
 
         /// <summary>Get the paginated list of quests which should be shown in the quest log.</summary>
         public virtual void paginateQuests()
         {
-            this.pages = new List<List<IQuest>>();
-            IList<IQuest> quests = this.GetAllQuests();
+            _pages = new List<List<IQuest>>();
+            IList<IQuest> quests = GetAllQuests();
             int startIndex = 0;
             while (startIndex < quests.Count)
             {
-                List<IQuest> page = new List<IQuest>();
+                var page = new List<IQuest>();
                 for (int i = 0; i < 6; i++)
                 {
                     if (startIndex >= quests.Count)
@@ -129,22 +41,21 @@ public class MyQuestLog : IClickableMenu
                     page.Add(quests[startIndex]);
                     startIndex++;
                 }
-                this.pages.Add(page);
+                _pages.Add(page);
             }
-            if (this.pages.Count == 0)
+            if (_pages.Count == 0)
             {
-                this.pages.Add(new List<IQuest>());
+                _pages.Add(new List<IQuest>());
             }
 
-            this.currentPage = Utility.Clamp(this.currentPage, 0, this.pages.Count - 1);
+            _currentPage = Utility.Clamp(_currentPage, 0, _pages.Count - 1);
 
             ClearCurrentQuestOnPage();
         }
-
         /// <summary>Get the quests which should be shown in the quest log.</summary>
-        public virtual IList<IQuest> GetAllQuests()
+        private static IList<IQuest> GetAllQuests()
         {
-            List<IQuest> quests = new List<IQuest>();
+            var quests = new List<IQuest>();
             for (int j = Game1.player.team.specialOrders.Count - 1; j >= 0; j--)
             {
                 SpecialOrder order = Game1.player.team.specialOrders[j];
@@ -167,7 +78,99 @@ public class MyQuestLog : IClickableMenu
             }
             return quests;
         }
+
+
+
+        protected int _currentPage;
+
+        public List<IQuest> GetCurrentPage()
+        {
+            return _pages[_currentPage];
+        }
+
+        public bool IsOnLastPage()
+        {
+            return _currentPage == _pages.Count - 1;
+        }
+        public bool IsNotOnLastPage()
+        {
+            return _currentPage < _pages.Count - 1;
+        }
+
+        public bool IsOnFirstPage()
+        {
+            return _currentPage == 0;
+        }
+        public bool IsNotOnFirstPage()
+        {
+            return _currentPage > 0;
+        }
+
+        public bool HasAnyPages()
+        {
+            return _pages.Count > 0;
+        }
+
+        public int NumberOfQuestsOnFirstPage()
+        {
+            return _pages[0].Count;
+        }
+
+        public void MoveToNextPage()
+        {
+            _currentPage++;
+        }
+        public void MoveToPreviousPage()
+        {
+            _currentPage--;
+        }
+
+
+
+        protected int _questPage = -1;
+
+        public bool IsNotCurrentQuestOnPageSet()
+        {
+            return _questPage == -1;
+        }
+        public bool IsCurrentQuestOnPageSet()
+        {
+            return _questPage != -1;
+        }
+
+        public void ClearCurrentQuestOnPage()
+        {
+            _questPage = -1;
+        }
+        public void SetCurrentQuestOnPage(int i)
+        {
+            _questPage = i;
+        }
+
+        public IQuest GetCurrentQuestOnPage()
+        {
+            return GetCurrentPage()[_questPage];
+        }
+        public void RemoveCurrentQuestOnPage()
+        {
+            GetCurrentPage().RemoveAt(_questPage);
+        }
+
+
+
+        protected IQuest? _shownQuest;
+
+        public void SetShownQuest(IQuest quest)
+        {
+            _shownQuest = quest;
+        }
+        public IQuest GetShownQuest()
+        {
+            return _shownQuest ?? throw new Exception($"Cannot return {nameof(_shownQuest)} because it's null");
+        }
     }
+
+
 
 
 
@@ -184,7 +187,6 @@ public class MyQuestLog : IClickableMenu
     public ClickableTextureComponent rewardBox;
     public ClickableTextureComponent cancelQuestButton;
 
-    protected IQuest _shownQuest;
     protected List<string> _objectiveText;
     protected float _contentHeight;
     protected float _scissorRectHeight;
@@ -334,12 +336,9 @@ public class MyQuestLog : IClickableMenu
 
 
 
-
-
-
     public bool NeedsScroll()
     {
-        if (this._shownQuest != null && this._shownQuest.ShouldDisplayAsComplete())
+        if (_questPageManager.GetShownQuest() != null && _questPageManager.GetShownQuest().ShouldDisplayAsComplete())
         {
             return false;
         }
@@ -391,7 +390,7 @@ public class MyQuestLog : IClickableMenu
                 }
             }
         }
-        else if (this._shownQuest.CanBeCancelled() && this.cancelQuestButton.containsPoint(x, y))
+        else if (_questPageManager.GetShownQuest().CanBeCancelled() && this.cancelQuestButton.containsPoint(x, y))
         {
             this.hoverText = Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11364");
         }
@@ -447,7 +446,6 @@ public class MyQuestLog : IClickableMenu
             this.snapCursorToCurrentSnappedComponent();
         }
     }
-
 
     public override void leftClickHeld(int x, int y)
     {
@@ -555,16 +553,16 @@ public class MyQuestLog : IClickableMenu
                 {
                     Game1.playSound("smallSelect");
                     _questPageManager.SetCurrentQuestOnPage(i);
-                    this._shownQuest = _questPageManager.GetCurrentPage()[i];
-                    this._objectiveText = this._shownQuest.GetObjectiveDescriptions();
-                    this._shownQuest.MarkAsViewed();
+                    _questPageManager.SetShownQuest(_questPageManager.GetCurrentPage()[i]);
+                    this._objectiveText = _questPageManager.GetShownQuest().GetObjectiveDescriptions();
+                    _questPageManager.GetShownQuest().MarkAsViewed();
                     this.scrollAmount = 0f;
                     this.SetScrollBarFromAmount();
                     if (Game1.options.SnappyMenus)
                     {
                         base.currentlySnappedComponent = base.getComponentWithID(102);
                         base.currentlySnappedComponent.rightNeighborID = -7777;
-                        base.currentlySnappedComponent.downNeighborID = (this.HasMoneyReward() ? 103 : (this._shownQuest.CanBeCancelled() ? 104 : (-1)));
+                        base.currentlySnappedComponent.downNeighborID = (this.HasMoneyReward() ? 103 : (_questPageManager.GetShownQuest().CanBeCancelled() ? 104 : (-1)));
                         this.snapCursorToCurrentSnappedComponent();
                     }
                     return;
@@ -584,13 +582,13 @@ public class MyQuestLog : IClickableMenu
             base.exitThisMenu();
             return;
         }
-        Quest quest = this._shownQuest as Quest;
-        int yOffset = ((this._shownQuest.IsTimedQuest() && this._shownQuest.GetDaysLeft() > 0 && SpriteText.getWidthOfString(this._shownQuest.GetName()) > base.width / 2) ? (-48) : 0);
-        if (_questPageManager.IsCurrentQuestOnPageSet() && this._shownQuest.ShouldDisplayAsComplete() && this._shownQuest.HasMoneyReward() && this.rewardBox.containsPoint(x, y + yOffset))
+        Quest quest = _questPageManager.GetShownQuest() as Quest;
+        int yOffset = ((_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0 && SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName()) > base.width / 2) ? (-48) : 0);
+        if (_questPageManager.IsCurrentQuestOnPageSet() && _questPageManager.GetShownQuest().ShouldDisplayAsComplete() && _questPageManager.GetShownQuest().HasMoneyReward() && this.rewardBox.containsPoint(x, y + yOffset))
         {
-            Game1.player.Money += this._shownQuest.GetMoneyReward();
+            Game1.player.Money += _questPageManager.GetShownQuest().GetMoneyReward();
             Game1.playSound("purchaseRepeat");
-            this._shownQuest.OnMoneyRewardClaimed();
+            _questPageManager.GetShownQuest().OnMoneyRewardClaimed();
         }
         else if (_questPageManager.IsCurrentQuestOnPageSet() && quest != null && !quest.completed && (bool)quest.canBeCancelled && this.cancelQuestButton.containsPoint(x, y))
         {
@@ -644,17 +642,17 @@ public class MyQuestLog : IClickableMenu
 
     public bool HasReward()
     {
-        return this._shownQuest.HasReward();
+        return _questPageManager.GetShownQuest().HasReward();
     }
 
     public bool HasMoneyReward()
     {
-        return this._shownQuest.HasMoneyReward();
+        return _questPageManager.GetShownQuest().HasMoneyReward();
     }
 
     public void exitQuestPage()
     {
-        if (this._shownQuest.OnLeaveQuestPage())
+        if (_questPageManager.GetShownQuest().OnLeaveQuestPage())
         {
             _questPageManager.RemoveCurrentQuestOnPage();
         }
@@ -769,19 +767,19 @@ public class MyQuestLog : IClickableMenu
 
     private void DrawSelectedQuestScreen(SpriteBatch b)
     {
-        int titleWidth = SpriteText.getWidthOfString(this._shownQuest.GetName());
+        int titleWidth = SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName());
         if (titleWidth > base.width / 2)
         {
-            IClickableMenu.drawTextureBox(b, Game1.mouseCursors, new Rectangle(384, 373, 18, 18), base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height + (this._shownQuest.ShouldDisplayAsComplete() ? 48 : 0), Color.White, 4f);
-            SpriteText.drawStringHorizontallyCenteredAt(b, this._shownQuest.GetName(), base.xPositionOnScreen + base.width / 2, base.yPositionOnScreen + 32);
+            IClickableMenu.drawTextureBox(b, Game1.mouseCursors, new Rectangle(384, 373, 18, 18), base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height + (_questPageManager.GetShownQuest().ShouldDisplayAsComplete() ? 48 : 0), Color.White, 4f);
+            SpriteText.drawStringHorizontallyCenteredAt(b, _questPageManager.GetShownQuest().GetName(), base.xPositionOnScreen + base.width / 2, base.yPositionOnScreen + 32);
         }
         else
         {
             IClickableMenu.drawTextureBox(b, Game1.mouseCursors, new Rectangle(384, 373, 18, 18), base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height, Color.White, 4f);
-            SpriteText.drawStringHorizontallyCenteredAt(b, this._shownQuest.GetName(), base.xPositionOnScreen + base.width / 2 + ((this._shownQuest.IsTimedQuest() && this._shownQuest.GetDaysLeft() > 0) ? (Math.Max(32, SpriteText.getWidthOfString(this._shownQuest.GetName()) / 3) - 32) : 0), base.yPositionOnScreen + 32);
+            SpriteText.drawStringHorizontallyCenteredAt(b, _questPageManager.GetShownQuest().GetName(), base.xPositionOnScreen + base.width / 2 + ((_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0) ? (Math.Max(32, SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName()) / 3) - 32) : 0), base.yPositionOnScreen + 32);
         }
         float extraYOffset = 0f;
-        if (this._shownQuest.IsTimedQuest() && this._shownQuest.GetDaysLeft() > 0)
+        if (_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0)
         {
             int xOffset = 0;
             if (titleWidth > base.width / 2)
@@ -792,7 +790,7 @@ public class MyQuestLog : IClickableMenu
             Utility.drawWithShadow(b, Game1.mouseCursors, new Vector2(base.xPositionOnScreen + xOffset + 32, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), new Rectangle(410, 501, 9, 9), Color.White, 0f, Vector2.Zero, 4f, flipped: false, 0.99f);
             Utility.drawTextWithShadow(b, Game1.parseText((_questPageManager.GetCurrentQuestOnPage().GetDaysLeft() > 1) ? Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11374", _questPageManager.GetCurrentQuestOnPage().GetDaysLeft()) : Game1.content.LoadString("Strings\\StringsFromCSFiles:Quest_FinalDay"), Game1.dialogueFont, base.width - 128), Game1.dialogueFont, new Vector2(base.xPositionOnScreen + xOffset + 80, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), Game1.textColor);
         }
-        string description = Game1.parseText(this._shownQuest.GetDescription(), Game1.dialogueFont, base.width - 128);
+        string description = Game1.parseText(_questPageManager.GetShownQuest().GetDescription(), Game1.dialogueFont, base.width - 128);
         Rectangle cached_scissor_rect = b.GraphicsDevice.ScissorRectangle;
         Vector2 description_size = Game1.dialogueFont.MeasureString(description);
         Rectangle scissor_rect = default(Rectangle);
@@ -810,7 +808,7 @@ public class MyQuestLog : IClickableMenu
         Game1.graphics.GraphicsDevice.ScissorRectangle = scissor_rect;
         Utility.drawTextWithShadow(b, description, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 64, (float)base.yPositionOnScreen - this.scrollAmount + 96f + extraYOffset), Game1.textColor);
         float yPos = (float)(base.yPositionOnScreen + 96) + description_size.Y + 32f - this.scrollAmount + extraYOffset;
-        if (this._shownQuest.ShouldDisplayAsComplete())
+        if (_questPageManager.GetShownQuest().ShouldDisplayAsComplete())
         {
             b.End();
             b.GraphicsDevice.ScissorRectangle = cached_scissor_rect;
@@ -820,7 +818,7 @@ public class MyQuestLog : IClickableMenu
             if (this.HasMoneyReward())
             {
                 b.Draw(Game1.mouseCursors, new Vector2(this.rewardBox.bounds.X + 16, (float)(this.rewardBox.bounds.Y + 16) - Game1.dialogueButtonScale / 2f + extraYOffset), new Rectangle(280, 410, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 1f);
-                SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:LoadGameMenu.cs.11020", this._shownQuest.GetMoneyReward()), base.xPositionOnScreen + 448, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
+                SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:LoadGameMenu.cs.11020", _questPageManager.GetShownQuest().GetMoneyReward()), base.xPositionOnScreen + 448, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
             }
         }
         else
@@ -828,7 +826,7 @@ public class MyQuestLog : IClickableMenu
             for (int j = 0; j < this._objectiveText.Count; j++)
             {
                 string parsed_text = Game1.parseText(this._objectiveText[j], width: base.width - 192, whichFont: Game1.dialogueFont);
-                bool num2 = this._shownQuest is SpecialOrder o && o.objectives[j].IsComplete();
+                bool num2 = _questPageManager.GetShownQuest() is SpecialOrder o && o.objectives[j].IsComplete();
                 Color text_color = Game1.unselectedOptionColor;
                 if (!num2)
                 {
@@ -837,7 +835,7 @@ public class MyQuestLog : IClickableMenu
                 }
                 Utility.drawTextWithShadow(b, parsed_text, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 128, yPos - 8f), text_color);
                 yPos += Game1.dialogueFont.MeasureString(parsed_text).Y;
-                if (this._shownQuest is SpecialOrder order)
+                if (_questPageManager.GetShownQuest() is SpecialOrder order)
                 {
                     OrderObjective order_objective = order.objectives[j];
                     if (order_objective.GetMaxCount() > 1 && order_objective.ShouldShowProgress())
@@ -898,7 +896,7 @@ public class MyQuestLog : IClickableMenu
             b.End();
             b.GraphicsDevice.ScissorRectangle = cached_scissor_rect;
             b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-            if (this._shownQuest.CanBeCancelled())
+            if (_questPageManager.GetShownQuest().CanBeCancelled())
             {
                 this.cancelQuestButton.draw(b);
             }
