@@ -219,10 +219,19 @@ public class MyQuestLog : IClickableMenu
             _scrollAmount += amount;
         }
 
+        private bool _isScrolling;
+        public bool IsScrolling()
+        {
+            return _isScrolling;
+        }
+        public void SetIsScrolling(bool value = true)
+        {
+            _isScrolling = value;
+        }
+
 
 
     }
-
 
 
     private void InitializeScrollbarComponents()
@@ -237,19 +246,11 @@ public class MyQuestLog : IClickableMenu
         this.scrollBarBounds.Height = this.downArrow.bounds.Y - 4 - this.scrollBarBounds.Y;
         this.scrollBar = new ClickableTextureComponent(new Rectangle(this.scrollBarBounds.X, this.scrollBarBounds.Y, 24, 40), Game1.mouseCursors, new Rectangle(435, 463, 6, 10), 4f);
     }
-
-
-
-
-
+    
     public ClickableTextureComponent upArrow;
     public ClickableTextureComponent downArrow;
     public ClickableTextureComponent scrollBar;
-    protected bool scrolling;
     public Rectangle scrollBarBounds;
-
-
-
 
 
 
@@ -530,7 +531,7 @@ public class MyQuestLog : IClickableMenu
         if (!GameMenu.forcePreventClose)
         {
             base.leftClickHeld(x, y);
-            if (this.scrolling)
+            if (_scrollbarHelper.IsScrolling())
             {
                 this.SetScrollFromY(y);
             }
@@ -542,7 +543,7 @@ public class MyQuestLog : IClickableMenu
         if (!GameMenu.forcePreventClose)
         {
             base.releaseLeftClick(x, y);
-            this.scrolling = false;
+            _scrollbarHelper.SetIsScrolling(false);
         }
     }
 
@@ -705,11 +706,11 @@ public class MyQuestLog : IClickableMenu
             }
             else if (this.scrollBar.containsPoint(x, y))
             {
-                this.scrolling = true;
+                _scrollbarHelper.SetIsScrolling();
             }
             else if (this.scrollBarBounds.Contains(x, y))
             {
-                this.scrolling = true;
+                _scrollbarHelper.SetIsScrolling();
             }
             else if (!this.downArrow.containsPoint(x, y)
                 && x > base.xPositionOnScreen + base.width
@@ -717,7 +718,7 @@ public class MyQuestLog : IClickableMenu
                 && y > base.yPositionOnScreen
                 && y < base.yPositionOnScreen + base.height)
             {
-                this.scrolling = true;
+                _scrollbarHelper.SetIsScrolling();
                 this.leftClickHeld(x, y);
                 this.releaseLeftClick(x, y);
             }
