@@ -166,7 +166,7 @@ public class MyQuestLog : IClickableMenu
         }
         public IQuest GetShownQuest()
         {
-            return _shownQuest ?? throw new Exception($"Cannot return {nameof(_shownQuest)} because it's null");
+            return _shownQuest;
         }
     }
 
@@ -188,8 +188,8 @@ public class MyQuestLog : IClickableMenu
     public ClickableTextureComponent cancelQuestButton;
 
     protected List<string> _objectiveText;
-    protected float _contentHeight;
-    protected float _scissorRectHeight;
+    protected float _contentHeight; // only set when drawing selected quest screen
+    protected float _scissorRectHeight; // only set when drawing selected quest screen
 
     public float scrollAmount;
     public ClickableTextureComponent upArrow;
@@ -269,6 +269,13 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
+
+
+
+
+
+    #region snap behavior (I think this jumps cursor to clickable components for controller input)
+
     protected override void customSnapBehavior(int direction, int oldRegion, int oldID)
     {
         if (oldID >= 0 && oldID < 6 && _questPageManager.IsNotCurrentQuestOnPageSet())
@@ -314,6 +321,14 @@ public class MyQuestLog : IClickableMenu
         this.snapCursorToCurrentSnappedComponent();
     }
 
+    #endregion
+
+
+
+
+
+    #region handle user input
+
     public override void receiveGamePadButton(Buttons b)
     {
         switch (b)
@@ -333,20 +348,22 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
-
-
-
-    public bool NeedsScroll()
+    private void SetScrollBarFromAmount()
     {
-        if (_questPageManager.GetShownQuest() != null && _questPageManager.GetShownQuest().ShouldDisplayAsComplete())
+        if (!this.NeedsScroll())
         {
-            return false;
+            this.scrollAmount = 0f;
+            return;
         }
-        if (_questPageManager.IsCurrentQuestOnPageSet())
+        if (this.scrollAmount < 8f)
         {
-            return this._contentHeight > this._scissorRectHeight;
+            this.scrollAmount = 0f;
         }
-        return false;
+        if (this.scrollAmount > this._contentHeight - this._scissorRectHeight - 8f)
+        {
+            this.scrollAmount = this._contentHeight - this._scissorRectHeight;
+        }
+        this.scrollBar.bounds.Y = (int)((float)this.scrollBarBounds.Y + (float)(this.scrollBarBounds.Height - this.scrollBar.bounds.Height) / Math.Max(1f, this._contentHeight - this._scissorRectHeight) * this.scrollAmount);
     }
 
     public override void receiveScrollWheelAction(int direction)
@@ -372,14 +389,13 @@ public class MyQuestLog : IClickableMenu
         base.receiveScrollWheelAction(direction);
     }
 
-    public override void receiveRightClick(int x, int y, bool playSound = true)
-    {
-    }
+    public override void receiveRightClick(int x, int y, bool playSound = true) { }
 
     public override void performHoverAction(int x, int y)
     {
         this.hoverText = "";
         base.performHoverAction(x, y);
+
         if (_questPageManager.IsNotCurrentQuestOnPageSet())
         {
             for (int i = 0; i < this.questLogButtons.Count; i++)
@@ -394,9 +410,11 @@ public class MyQuestLog : IClickableMenu
         {
             this.hoverText = Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11364");
         }
+
         this.forwardButton.tryHover(x, y, 0.2f);
         this.backButton.tryHover(x, y, 0.2f);
         this.cancelQuestButton.tryHover(x, y, 0.2f);
+
         if (this.NeedsScroll())
         {
             this.upArrow.tryHover(x, y);
@@ -421,9 +439,6 @@ public class MyQuestLog : IClickableMenu
             Game1.playSound("bigDeSelect");
         }
     }
-
-
-
 
     private void nonQuestPageForwardButton()
     {
@@ -503,24 +518,6 @@ public class MyQuestLog : IClickableMenu
         this.SetScrollBarFromAmount();
     }
 
-    private void SetScrollBarFromAmount()
-    {
-        if (!this.NeedsScroll())
-        {
-            this.scrollAmount = 0f;
-            return;
-        }
-        if (this.scrollAmount < 8f)
-        {
-            this.scrollAmount = 0f;
-        }
-        if (this.scrollAmount > this._contentHeight - this._scissorRectHeight - 8f)
-        {
-            this.scrollAmount = this._contentHeight - this._scissorRectHeight;
-        }
-        this.scrollBar.bounds.Y = (int)((float)this.scrollBarBounds.Y + (float)(this.scrollBarBounds.Height - this.scrollBar.bounds.Height) / Math.Max(1f, this._contentHeight - this._scissorRectHeight) * this.scrollAmount);
-    }
-
     public override void applyMovementKey(int direction)
     {
         base.applyMovementKey(direction);
@@ -545,6 +542,7 @@ public class MyQuestLog : IClickableMenu
         {
             return;
         }
+
         if (_questPageManager.IsNotCurrentQuestOnPageSet())
         {
             for (int i = 0; i < this.questLogButtons.Count; i++)
@@ -562,7 +560,11 @@ public class MyQuestLog : IClickableMenu
                     {
                         base.currentlySnappedComponent = base.getComponentWithID(102);
                         base.currentlySnappedComponent.rightNeighborID = -7777;
-                        base.currentlySnappedComponent.downNeighborID = (this.HasMoneyReward() ? 103 : (_questPageManager.GetShownQuest().CanBeCancelled() ? 104 : (-1)));
+                        base.currentlySnappedComponent.downNeighborID = (_questPageManager.GetShownQuest().HasMoneyReward()
+                            ? 103
+                            : (_questPageManager.GetShownQuest().CanBeCancelled()
+                                ? 104
+                                : (-1)));
                         this.snapCursorToCurrentSnappedComponent();
                     }
                     return;
@@ -582,15 +584,27 @@ public class MyQuestLog : IClickableMenu
             base.exitThisMenu();
             return;
         }
+
         Quest quest = _questPageManager.GetShownQuest() as Quest;
-        int yOffset = ((_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0 && SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName()) > base.width / 2) ? (-48) : 0);
-        if (_questPageManager.IsCurrentQuestOnPageSet() && _questPageManager.GetShownQuest().ShouldDisplayAsComplete() && _questPageManager.GetShownQuest().HasMoneyReward() && this.rewardBox.containsPoint(x, y + yOffset))
+        int yOffset = (_questPageManager.GetShownQuest().IsTimedQuest()
+            && _questPageManager.GetShownQuest().GetDaysLeft() > 0
+            && SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName()) > base.width / 2)
+            ? (-48)
+            : 0;
+        if (_questPageManager.IsCurrentQuestOnPageSet()
+            && _questPageManager.GetShownQuest().ShouldDisplayAsComplete()
+            && _questPageManager.GetShownQuest().HasMoneyReward()
+            && this.rewardBox.containsPoint(x, y + yOffset))
         {
             Game1.player.Money += _questPageManager.GetShownQuest().GetMoneyReward();
             Game1.playSound("purchaseRepeat");
             _questPageManager.GetShownQuest().OnMoneyRewardClaimed();
         }
-        else if (_questPageManager.IsCurrentQuestOnPageSet() && quest != null && !quest.completed && (bool)quest.canBeCancelled && this.cancelQuestButton.containsPoint(x, y))
+        else if (_questPageManager.IsCurrentQuestOnPageSet()
+            && quest != null
+            && !quest.completed
+            && (bool)quest.canBeCancelled
+            && this.cancelQuestButton.containsPoint(x, y))
         {
             quest.accepted.Value = false;
             if (quest.dailyQuest.Value && quest.dayQuestAccepted.Value == Game1.Date.TotalDays)
@@ -611,14 +625,17 @@ public class MyQuestLog : IClickableMenu
         {
             this.exitQuestPage();
         }
+
         if (this.NeedsScroll())
         {
-            if (this.downArrow.containsPoint(x, y) && this.scrollAmount < this._contentHeight - this._scissorRectHeight)
+            if (this.downArrow.containsPoint(x, y)
+                && this.scrollAmount < this._contentHeight - this._scissorRectHeight)
             {
                 this.DownArrowPressed();
                 Game1.playSound("shwip");
             }
-            else if (this.upArrow.containsPoint(x, y) && this.scrollAmount > 0f)
+            else if (this.upArrow.containsPoint(x, y)
+                && this.scrollAmount > 0f)
             {
                 this.UpArrowPressed();
                 Game1.playSound("shwip");
@@ -631,7 +648,11 @@ public class MyQuestLog : IClickableMenu
             {
                 this.scrolling = true;
             }
-            else if (!this.downArrow.containsPoint(x, y) && x > base.xPositionOnScreen + base.width && x < base.xPositionOnScreen + base.width + 128 && y > base.yPositionOnScreen && y < base.yPositionOnScreen + base.height)
+            else if (!this.downArrow.containsPoint(x, y)
+                && x > base.xPositionOnScreen + base.width
+                && x < base.xPositionOnScreen + base.width + 128
+                && y > base.yPositionOnScreen
+                && y < base.yPositionOnScreen + base.height)
             {
                 this.scrolling = true;
                 this.leftClickHeld(x, y);
@@ -640,14 +661,24 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
-    public bool HasReward()
-    {
-        return _questPageManager.GetShownQuest().HasReward();
-    }
+    #endregion
 
-    public bool HasMoneyReward()
+
+
+
+
+
+    public bool NeedsScroll()
     {
-        return _questPageManager.GetShownQuest().HasMoneyReward();
+        if (_questPageManager.GetShownQuest() != null && _questPageManager.GetShownQuest().ShouldDisplayAsComplete())
+        {
+            return false;
+        }
+        if (_questPageManager.IsCurrentQuestOnPageSet())
+        {
+            return this._contentHeight > this._scissorRectHeight;
+        }
+        return false;
     }
 
     public void exitQuestPage()
@@ -665,14 +696,22 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
+
+
+
     public override void update(GameTime time)
     {
         base.update(time);
-        if (_questPageManager.IsCurrentQuestOnPageSet() && this.HasReward())
+        if (_questPageManager.IsCurrentQuestOnPageSet() && _questPageManager.GetShownQuest().HasReward())
         {
             this.rewardBox.scale = this.rewardBox.baseScale + Game1.dialogueButtonScale / 20f;
         }
     }
+
+
+
+
+    #region draw()
 
     public override void draw(SpriteBatch b)
     {
@@ -709,6 +748,8 @@ public class MyQuestLog : IClickableMenu
             base.xPositionOnScreen + base.width / 2, base.yPositionOnScreen - 64);
     }
 
+
+
     private void DrawQuestsListScreen(SpriteBatch b)
     {
         // draw main box frame/background
@@ -728,7 +769,6 @@ public class MyQuestLog : IClickableMenu
             }
         }
     }
-
     private static void DrawQuestsListEntry(SpriteBatch b, ClickableComponent questLogButton, IQuest quest)
     {
         // draw per-quest frame/background
@@ -764,6 +804,8 @@ public class MyQuestLog : IClickableMenu
             quest.GetName(),
             questLogButton.bounds.X + 128 + 4, questLogButton.bounds.Y + 20);
     }
+
+
 
     private void DrawSelectedQuestScreen(SpriteBatch b)
     {
@@ -815,7 +857,7 @@ public class MyQuestLog : IClickableMenu
             b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
             SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11376"), base.xPositionOnScreen + 32 + 4, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
             this.rewardBox.draw(b, Color.White, 0.9f, 0, 0, (int)extraYOffset);
-            if (this.HasMoneyReward())
+            if (_questPageManager.GetShownQuest().HasMoneyReward())
             {
                 b.Draw(Game1.mouseCursors, new Vector2(this.rewardBox.bounds.X + 16, (float)(this.rewardBox.bounds.Y + 16) - Game1.dialogueButtonScale / 2f + extraYOffset), new Rectangle(280, 410, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 1f);
                 SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:LoadGameMenu.cs.11020", _questPageManager.GetShownQuest().GetMoneyReward()), base.xPositionOnScreen + 448, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
@@ -914,6 +956,8 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
+
+
     private void DrawScrollBarIfNeeded(SpriteBatch b)
     {
         if (this.NeedsScroll())
@@ -949,4 +993,6 @@ public class MyQuestLog : IClickableMenu
             IClickableMenu.drawHoverText(b, this.hoverText, Game1.dialogueFont);
         }
     }
+
+    #endregion
 }
