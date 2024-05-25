@@ -311,7 +311,6 @@ public class MyQuestLog : IClickableMenu
     public ClickableTextureComponent rewardBox;
     public ClickableTextureComponent cancelQuestButton;
 
-    protected List<string> _objectiveText;
     protected float _contentHeight; // only set when drawing selected quest screen
     protected float _scissorRectHeight; // only set when drawing selected quest screen
 
@@ -658,7 +657,6 @@ public class MyQuestLog : IClickableMenu
                     Game1.playSound("smallSelect");
                     _questPageManager.SetCurrentQuestOnPage(i);
                     _questPageManager.SetShownQuest(_questPageManager.GetCurrentPage()[i]);
-                    this._objectiveText = _questPageManager.GetShownQuest().GetObjectiveDescriptions();
                     _questPageManager.GetShownQuest().MarkAsViewed();
                     _scrollbarHelper.SetScrollAmountToZero();
                     this.SetScrollBarFromAmount();
@@ -768,8 +766,6 @@ public class MyQuestLog : IClickableMenu
     }
 
     #endregion
-
-
 
 
 
@@ -915,19 +911,37 @@ public class MyQuestLog : IClickableMenu
 
     private void DrawSelectedQuestScreen(SpriteBatch b)
     {
-        int titleWidth = SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName());
+        IQuest shownQuest = _questPageManager.GetShownQuest();
+
+        // draw quest name as title
+        int titleWidth = SpriteText.getWidthOfString(shownQuest.GetName());
         if (titleWidth > base.width / 2)
         {
-            IClickableMenu.drawTextureBox(b, Game1.mouseCursors, new Rectangle(384, 373, 18, 18), base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height + (_questPageManager.GetShownQuest().ShouldDisplayAsComplete() ? 48 : 0), Color.White, 4f);
-            SpriteText.drawStringHorizontallyCenteredAt(b, _questPageManager.GetShownQuest().GetName(), base.xPositionOnScreen + base.width / 2, base.yPositionOnScreen + 32);
+            IClickableMenu.drawTextureBox(b,
+                Game1.mouseCursors,
+                new Rectangle(384, 373, 18, 18),
+                base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height + (shownQuest.ShouldDisplayAsComplete() ? 48 : 0),
+                Color.White, 4f);
+            SpriteText.drawStringHorizontallyCenteredAt(b,
+                shownQuest.GetName(),
+                base.xPositionOnScreen + base.width / 2, base.yPositionOnScreen + 32);
         }
         else
         {
-            IClickableMenu.drawTextureBox(b, Game1.mouseCursors, new Rectangle(384, 373, 18, 18), base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height, Color.White, 4f);
-            SpriteText.drawStringHorizontallyCenteredAt(b, _questPageManager.GetShownQuest().GetName(), base.xPositionOnScreen + base.width / 2 + ((_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0) ? (Math.Max(32, SpriteText.getWidthOfString(_questPageManager.GetShownQuest().GetName()) / 3) - 32) : 0), base.yPositionOnScreen + 32);
+            IClickableMenu.drawTextureBox(b,
+                Game1.mouseCursors,
+                new Rectangle(384, 373, 18, 18),
+                base.xPositionOnScreen, base.yPositionOnScreen, base.width, base.height,
+                Color.White, 4f);
+            SpriteText.drawStringHorizontallyCenteredAt(b,
+                shownQuest.GetName(),
+                base.xPositionOnScreen + base.width / 2 + ((shownQuest.IsTimedQuest() && shownQuest.GetDaysLeft() > 0) ? (Math.Max(32, SpriteText.getWidthOfString(shownQuest.GetName()) / 3) - 32) : 0), base.yPositionOnScreen + 32);
         }
+
+        // draw timed quest remaining days, if needed (noting any "extra Y offset" for future drawing)
         float extraYOffset = 0f;
-        if (_questPageManager.GetShownQuest().IsTimedQuest() && _questPageManager.GetShownQuest().GetDaysLeft() > 0)
+        if (shownQuest.IsTimedQuest()
+            && shownQuest.GetDaysLeft() > 0)
         {
             int xOffset = 0;
             if (titleWidth > base.width / 2)
@@ -935,12 +949,24 @@ public class MyQuestLog : IClickableMenu
                 xOffset = 28;
                 extraYOffset = 48f;
             }
-            Utility.drawWithShadow(b, Game1.mouseCursors, new Vector2(base.xPositionOnScreen + xOffset + 32, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), new Rectangle(410, 501, 9, 9), Color.White, 0f, Vector2.Zero, 4f, flipped: false, 0.99f);
-            Utility.drawTextWithShadow(b, Game1.parseText((_questPageManager.GetCurrentQuestOnPage().GetDaysLeft() > 1) ? Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11374", _questPageManager.GetCurrentQuestOnPage().GetDaysLeft()) : Game1.content.LoadString("Strings\\StringsFromCSFiles:Quest_FinalDay"), Game1.dialogueFont, base.width - 128), Game1.dialogueFont, new Vector2(base.xPositionOnScreen + xOffset + 80, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset), Game1.textColor);
+            Utility.drawWithShadow(b,
+                Game1.mouseCursors,
+                new Vector2(base.xPositionOnScreen + xOffset + 32, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset),
+                new Rectangle(410, 501, 9, 9),
+                Color.White, 0f, Vector2.Zero, 4f, flipped: false, 0.99f);
+            Utility.drawTextWithShadow(b,
+                Game1.parseText(
+                    (_questPageManager.GetCurrentQuestOnPage().GetDaysLeft() > 1)
+                        ? Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11374", _questPageManager.GetCurrentQuestOnPage().GetDaysLeft())
+                        : Game1.content.LoadString("Strings\\StringsFromCSFiles:Quest_FinalDay"),
+                    Game1.dialogueFont, base.width - 128),
+                Game1.dialogueFont,
+                new Vector2(base.xPositionOnScreen + xOffset + 80, (float)(base.yPositionOnScreen + 48 - 8) + extraYOffset),
+                Game1.textColor);
         }
-        string description = Game1.parseText(_questPageManager.GetShownQuest().GetDescription(), Game1.dialogueFont, base.width - 128);
+
+        // cache a copy of the current "scissor_rect" to be restored by the time we're done drawing quest
         Rectangle cached_scissor_rect = b.GraphicsDevice.ScissorRectangle;
-        Vector2 description_size = Game1.dialogueFont.MeasureString(description);
         Rectangle scissor_rect = default(Rectangle);
         scissor_rect.X = base.xPositionOnScreen + 32;
         scissor_rect.Y = base.yPositionOnScreen + 96 + (int)extraYOffset;
@@ -954,38 +980,76 @@ public class MyQuestLog : IClickableMenu
             ScissorTestEnable = true
         });
         Game1.graphics.GraphicsDevice.ScissorRectangle = scissor_rect;
-        Utility.drawTextWithShadow(b, description, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 64, (float)base.yPositionOnScreen - _scrollbarHelper.GetScrollAmount() + 96f + extraYOffset), Game1.textColor);
-        float yPos = (float)(base.yPositionOnScreen + 96) + description_size.Y + 32f - _scrollbarHelper.GetScrollAmount() + extraYOffset;
-        if (_questPageManager.GetShownQuest().ShouldDisplayAsComplete())
+
+        // draw description
+        string description = Game1.parseText(shownQuest.GetDescription(), Game1.dialogueFont, base.width - 128);
+        Vector2 description_size = Game1.dialogueFont.MeasureString(description);
+        Utility.drawTextWithShadow(b,
+            description,
+            Game1.dialogueFont,
+            new Vector2(base.xPositionOnScreen + 64, (float)base.yPositionOnScreen - _scrollbarHelper.GetScrollAmount() + 96f + extraYOffset),
+            Game1.textColor);
+
+
+        float yPos = (float)(base.yPositionOnScreen + 96) + description_size.Y + 32f - _scrollbarHelper.GetScrollAmount() + extraYOffset;        
+        if (shownQuest.ShouldDisplayAsComplete())
         {
             b.End();
             b.GraphicsDevice.ScissorRectangle = cached_scissor_rect;
             b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-            SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11376"), base.xPositionOnScreen + 32 + 4, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
+
+            // draw reward summary
+            SpriteText.drawString(b,
+                Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11376"),
+                base.xPositionOnScreen + 32 + 4, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
             this.rewardBox.draw(b, Color.White, 0.9f, 0, 0, (int)extraYOffset);
-            if (_questPageManager.GetShownQuest().HasMoneyReward())
+            if (shownQuest.HasMoneyReward())
             {
-                b.Draw(Game1.mouseCursors, new Vector2(this.rewardBox.bounds.X + 16, (float)(this.rewardBox.bounds.Y + 16) - Game1.dialogueButtonScale / 2f + extraYOffset), new Rectangle(280, 410, 16, 16), Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 1f);
-                SpriteText.drawString(b, Game1.content.LoadString("Strings\\StringsFromCSFiles:LoadGameMenu.cs.11020", _questPageManager.GetShownQuest().GetMoneyReward()), base.xPositionOnScreen + 448, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
+                b.Draw(Game1.mouseCursors,
+                    new Vector2(this.rewardBox.bounds.X + 16, (float)(this.rewardBox.bounds.Y + 16) - Game1.dialogueButtonScale / 2f + extraYOffset),
+                    new Rectangle(280, 410, 16, 16),
+                    Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 1f);
+                SpriteText.drawString(b,
+                    Game1.content.LoadString("Strings\\StringsFromCSFiles:LoadGameMenu.cs.11020", shownQuest.GetMoneyReward()),
+                    base.xPositionOnScreen + 448, this.rewardBox.bounds.Y + 21 + 4 + (int)extraYOffset);
             }
         }
         else
         {
-            for (int j = 0; j < this._objectiveText.Count; j++)
+            // draw quest objectives
+            var objectiveText = shownQuest.GetObjectiveDescriptions();
+            for (int j = 0; j < objectiveText.Count; j++)
             {
-                string parsed_text = Game1.parseText(this._objectiveText[j], width: base.width - 192, whichFont: Game1.dialogueFont);
-                bool num2 = _questPageManager.GetShownQuest() is SpecialOrder o && o.objectives[j].IsComplete();
+                var objectiveIndex = j;
+
                 Color text_color = Game1.unselectedOptionColor;
-                if (!num2)
+
+                bool isSpecialOrderAndComplete = shownQuest is SpecialOrder o && o.objectives[objectiveIndex].IsComplete();
+                if (!isSpecialOrderAndComplete)
                 {
                     text_color = Color.DarkBlue;
-                    Utility.drawWithShadow(b, Game1.mouseCursors, new Vector2((float)(base.xPositionOnScreen + 96) + 8f * Game1.dialogueButtonScale / 10f, yPos), new Rectangle(412, 495, 5, 4), Color.White, (float)Math.PI / 2f, Vector2.Zero);
+
+                    // draw triangle "bullet" in front of objective
+                    Utility.drawWithShadow(b,
+                        Game1.mouseCursors,
+                        new Vector2((float)(base.xPositionOnScreen + 96) + 8f * Game1.dialogueButtonScale / 10f, yPos),
+                        new Rectangle(412, 495, 5, 4),
+                        Color.White, (float)Math.PI / 2f, Vector2.Zero);
                 }
-                Utility.drawTextWithShadow(b, parsed_text, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 128, yPos - 8f), text_color);
+
+                // draw objective text
+                string parsed_text = Game1.parseText(objectiveText[objectiveIndex], width: base.width - 192, whichFont: Game1.dialogueFont);
+                Utility.drawTextWithShadow(b,
+                    parsed_text,
+                    Game1.dialogueFont,
+                    new Vector2(base.xPositionOnScreen + 128, yPos - 8f),
+                    text_color);
                 yPos += Game1.dialogueFont.MeasureString(parsed_text).Y;
-                if (_questPageManager.GetShownQuest() is SpecialOrder order)
+
+                // draw progress tally for special order quests
+                if (shownQuest is SpecialOrder order)
                 {
-                    OrderObjective order_objective = order.objectives[j];
+                    OrderObjective order_objective = order.objectives[objectiveIndex];
                     if (order_objective.GetMaxCount() > 1 && order_objective.ShouldShowProgress())
                     {
                         Color dark_bar_color = Color.DarkRed;
@@ -1008,16 +1072,33 @@ public class MyQuestLog : IClickableMenu
                         int count_text_width = (int)Game1.dialogueFont.MeasureString(objective_count_text).X;
                         int text_draw_position = base.xPositionOnScreen + base.width - inset - count_text_width;
                         int max_text_draw_position = base.xPositionOnScreen + base.width - inset - max_text_width;
-                        Utility.drawTextWithShadow(b, objective_count_text, Game1.dialogueFont, new Vector2(text_draw_position, yPos), Color.DarkBlue);
+
+                        // draw "x/y" progress count text
+                        Utility.drawTextWithShadow(b,
+                            objective_count_text,
+                            Game1.dialogueFont,
+                            new Vector2(text_draw_position, yPos),
+                            Color.DarkBlue);
+
+                        // draw graphical progress bar
                         Rectangle bar_draw_position = new Rectangle(base.xPositionOnScreen + inset, (int)yPos, base.width - inset * 2 - objective_count_draw_width, bar_background_source.Height * 4);
                         if (bar_draw_position.Right > max_text_draw_position - 16)
                         {
                             int adjustment = bar_draw_position.Right - (max_text_draw_position - 16);
                             bar_draw_position.Width -= adjustment;
                         }
-                        b.Draw(Game1.mouseCursors2, new Rectangle(bar_draw_position.X, bar_draw_position.Y, slice_width * 4, bar_draw_position.Height), new Rectangle(bar_background_source.X, bar_background_source.Y, slice_width, bar_background_source.Height), Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
-                        b.Draw(Game1.mouseCursors2, new Rectangle(bar_draw_position.X + slice_width * 4, bar_draw_position.Y, bar_draw_position.Width - 2 * slice_width * 4, bar_draw_position.Height), new Rectangle(bar_background_source.X + slice_width, bar_background_source.Y, bar_background_source.Width - 2 * slice_width, bar_background_source.Height), Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
-                        b.Draw(Game1.mouseCursors2, new Rectangle(bar_draw_position.Right - slice_width * 4, bar_draw_position.Y, slice_width * 4, bar_draw_position.Height), new Rectangle(bar_background_source.Right - slice_width, bar_background_source.Y, slice_width, bar_background_source.Height), Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+                        b.Draw(Game1.mouseCursors2,
+                            new Rectangle(bar_draw_position.X, bar_draw_position.Y, slice_width * 4, bar_draw_position.Height),
+                            new Rectangle(bar_background_source.X, bar_background_source.Y, slice_width, bar_background_source.Height),
+                            Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+                        b.Draw(Game1.mouseCursors2,
+                            new Rectangle(bar_draw_position.X + slice_width * 4, bar_draw_position.Y, bar_draw_position.Width - 2 * slice_width * 4, bar_draw_position.Height),
+                            new Rectangle(bar_background_source.X + slice_width, bar_background_source.Y, bar_background_source.Width - 2 * slice_width, bar_background_source.Height),
+                            Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+                        b.Draw(Game1.mouseCursors2,
+                            new Rectangle(bar_draw_position.Right - slice_width * 4, bar_draw_position.Y, slice_width * 4, bar_draw_position.Height),
+                            new Rectangle(bar_background_source.Right - slice_width, bar_background_source.Y, slice_width, bar_background_source.Height),
+                            Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
                         float quest_progress = (float)order_objective.GetCount() / (float)order_objective.GetMaxCount();
                         if (order_objective.GetMaxCount() < notches)
                         {
@@ -1027,7 +1108,10 @@ public class MyQuestLog : IClickableMenu
                         bar_draw_position.Width -= 4 * bar_horizontal_padding * 2;
                         for (int k = 1; k < notches; k++)
                         {
-                            b.Draw(Game1.mouseCursors2, new Vector2((float)bar_draw_position.X + (float)bar_draw_position.Width * ((float)k / (float)notches), bar_draw_position.Y), bar_notch_source, Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.5f);
+                            b.Draw(Game1.mouseCursors2,
+                                new Vector2((float)bar_draw_position.X + (float)bar_draw_position.Width * ((float)k / (float)notches), bar_draw_position.Y),
+                                bar_notch_source,
+                                Color.White, 0f, Vector2.Zero, 4f, SpriteEffects.None, 0.5f);
                         }
                         bar_draw_position.Y += 4 * bar_vertical_padding;
                         bar_draw_position.Height -= 4 * bar_vertical_padding * 2;
@@ -1039,24 +1123,33 @@ public class MyQuestLog : IClickableMenu
                         yPos += (float)((bar_background_source.Height + 4) * 4);
                     }
                 }
+
                 this._contentHeight = yPos + _scrollbarHelper.GetScrollAmount() - (float)scissor_rect.Y;
             }
             b.End();
             b.GraphicsDevice.ScissorRectangle = cached_scissor_rect;
             b.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
-            if (_questPageManager.GetShownQuest().CanBeCancelled())
+
+            // draw cancel quest button, if needed
+            if (shownQuest.CanBeCancelled())
             {
                 this.cancelQuestButton.draw(b);
             }
+
+            // draws shadows at top/bottom of window if there's more scrollable content above/below
             if (this.NeedsScroll())
             {
                 if (_scrollbarHelper.GetScrollAmount() > 0f)
                 {
-                    b.Draw(Game1.staminaRect, new Rectangle(scissor_rect.X, scissor_rect.Top, scissor_rect.Width, 4), Color.Black * 0.15f);
+                    b.Draw(Game1.staminaRect,
+                        new Rectangle(scissor_rect.X, scissor_rect.Top, scissor_rect.Width, 4),
+                        Color.Black * 0.15f);
                 }
                 if (_scrollbarHelper.GetScrollAmount() < this._contentHeight - this._scissorRectHeight)
                 {
-                    b.Draw(Game1.staminaRect, new Rectangle(scissor_rect.X, scissor_rect.Bottom - 4, scissor_rect.Width, 4), Color.Black * 0.15f);
+                    b.Draw(Game1.staminaRect,
+                        new Rectangle(scissor_rect.X, scissor_rect.Bottom - 4, scissor_rect.Width, 4),
+                        Color.Black * 0.15f);
                 }
             }
         }
