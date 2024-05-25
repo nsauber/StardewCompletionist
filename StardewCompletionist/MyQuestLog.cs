@@ -194,7 +194,62 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
-    
+    public readonly ScrollbarHelper _scrollbarHelper = new();
+    public class ScrollbarHelper
+    {
+        private float _scrollAmount;
+        public void SetScrollAmountToZero()
+        {
+            _scrollAmount = 0f;
+        }
+        public void SetScrollAmount(float amount)
+        {
+            _scrollAmount = amount;
+        }
+        public float GetScrollAmount()
+        {
+            return _scrollAmount;
+        }
+        public void DecrementScrollAmountBy(float amount)
+        {
+            _scrollAmount -= amount;
+        }
+        public void IncrementScrollAmountBy(float amount)
+        {
+            _scrollAmount += amount;
+        }
+
+
+
+    }
+
+
+
+    private void InitializeScrollbarComponents()
+    {
+        int scrollbar_x = base.xPositionOnScreen + base.width + 16;
+        this.upArrow = new ClickableTextureComponent(new Rectangle(scrollbar_x, base.yPositionOnScreen + 96, 44, 48), Game1.mouseCursors, new Rectangle(421, 459, 11, 12), 4f);
+        this.downArrow = new ClickableTextureComponent(new Rectangle(scrollbar_x, base.yPositionOnScreen + base.height - 64, 44, 48), Game1.mouseCursors, new Rectangle(421, 472, 11, 12), 4f);
+        this.scrollBarBounds = default(Rectangle);
+        this.scrollBarBounds.X = this.upArrow.bounds.X + 12;
+        this.scrollBarBounds.Width = 24;
+        this.scrollBarBounds.Y = this.upArrow.bounds.Y + this.upArrow.bounds.Height + 4;
+        this.scrollBarBounds.Height = this.downArrow.bounds.Y - 4 - this.scrollBarBounds.Y;
+        this.scrollBar = new ClickableTextureComponent(new Rectangle(this.scrollBarBounds.X, this.scrollBarBounds.Y, 24, 40), Game1.mouseCursors, new Rectangle(435, 463, 6, 10), 4f);
+    }
+
+
+
+
+
+    public ClickableTextureComponent upArrow;
+    public ClickableTextureComponent downArrow;
+    public ClickableTextureComponent scrollBar;
+    protected bool scrolling;
+    public Rectangle scrollBarBounds;
+
+
+
 
 
 
@@ -203,10 +258,10 @@ public class MyQuestLog : IClickableMenu
 
     public List<ClickableComponent> questLogButtons;
 
-    public const int region_forwardButton = 101;
-    public const int region_backButton = 102;
-    public const int region_rewardBox = 103;
-    public const int region_cancelQuestButton = 104;    
+    //public const int region_forwardButton = 101; // unused?
+    //public const int region_backButton = 102; // unused?
+    //public const int region_rewardBox = 103; // unused?
+    //public const int region_cancelQuestButton = 104; // unused?
     public ClickableTextureComponent forwardButton;
     public ClickableTextureComponent backButton;
     public ClickableTextureComponent rewardBox;
@@ -216,13 +271,6 @@ public class MyQuestLog : IClickableMenu
     protected float _contentHeight; // only set when drawing selected quest screen
     protected float _scissorRectHeight; // only set when drawing selected quest screen
 
-    public float scrollAmount;
-    public ClickableTextureComponent upArrow;
-    public ClickableTextureComponent downArrow;
-    public ClickableTextureComponent scrollBar;
-    protected bool scrolling;
-    public Rectangle scrollBarBounds;
-    
     public MyQuestLog()
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
@@ -275,15 +323,7 @@ public class MyQuestLog : IClickableMenu
             myID = 104
         };
 
-        int scrollbar_x = base.xPositionOnScreen + base.width + 16;
-        this.upArrow = new ClickableTextureComponent(new Rectangle(scrollbar_x, base.yPositionOnScreen + 96, 44, 48), Game1.mouseCursors, new Rectangle(421, 459, 11, 12), 4f);
-        this.downArrow = new ClickableTextureComponent(new Rectangle(scrollbar_x, base.yPositionOnScreen + base.height - 64, 44, 48), Game1.mouseCursors, new Rectangle(421, 472, 11, 12), 4f);
-        this.scrollBarBounds = default(Rectangle);
-        this.scrollBarBounds.X = this.upArrow.bounds.X + 12;
-        this.scrollBarBounds.Width = 24;
-        this.scrollBarBounds.Y = this.upArrow.bounds.Y + this.upArrow.bounds.Height + 4;
-        this.scrollBarBounds.Height = this.downArrow.bounds.Y - 4 - this.scrollBarBounds.Y;
-        this.scrollBar = new ClickableTextureComponent(new Rectangle(this.scrollBarBounds.X, this.scrollBarBounds.Y, 24, 40), Game1.mouseCursors, new Rectangle(435, 463, 6, 10), 4f);
+        InitializeScrollbarComponents();
 
         if (Game1.options.SnappyMenus)
         {
@@ -375,25 +415,25 @@ public class MyQuestLog : IClickableMenu
     {
         if (!this.NeedsScroll())
         {
-            this.scrollAmount = 0f;
+            _scrollbarHelper.SetScrollAmountToZero();
             return;
         }
-        if (this.scrollAmount < 8f)
+        if (_scrollbarHelper.GetScrollAmount() < 8f)
         {
-            this.scrollAmount = 0f;
+            _scrollbarHelper.SetScrollAmountToZero();
         }
-        if (this.scrollAmount > this._contentHeight - this._scissorRectHeight - 8f)
+        if (_scrollbarHelper.GetScrollAmount() > this._contentHeight - this._scissorRectHeight - 8f)
         {
-            this.scrollAmount = this._contentHeight - this._scissorRectHeight;
+            _scrollbarHelper.SetScrollAmount(this._contentHeight - this._scissorRectHeight);
         }
-        this.scrollBar.bounds.Y = (int)((float)this.scrollBarBounds.Y + (float)(this.scrollBarBounds.Height - this.scrollBar.bounds.Height) / Math.Max(1f, this._contentHeight - this._scissorRectHeight) * this.scrollAmount);
+        this.scrollBar.bounds.Y = (int)((float)this.scrollBarBounds.Y + (float)(this.scrollBarBounds.Height - this.scrollBar.bounds.Height) / Math.Max(1f, this._contentHeight - this._scissorRectHeight) * _scrollbarHelper.GetScrollAmount());
     }
 
     public override void receiveScrollWheelAction(int direction)
     {
         if (this.NeedsScroll())
         {
-            float new_scroll = this.scrollAmount - (float)(Math.Sign(direction) * 64 / 2);
+            float new_scroll = _scrollbarHelper.GetScrollAmount() - (float)(Math.Sign(direction) * 64 / 2);
             if (new_scroll < 0f)
             {
                 new_scroll = 0f;
@@ -402,9 +442,9 @@ public class MyQuestLog : IClickableMenu
             {
                 new_scroll = this._contentHeight - this._scissorRectHeight;
             }
-            if (this.scrollAmount != new_scroll)
+            if (_scrollbarHelper.GetScrollAmount() != new_scroll)
             {
-                this.scrollAmount = new_scroll;
+                _scrollbarHelper.SetScrollAmount(new_scroll);
                 Game1.playSound("shiny4");
                 this.SetScrollBarFromAmount();
             }
@@ -511,7 +551,7 @@ public class MyQuestLog : IClickableMenu
         int y2 = this.scrollBar.bounds.Y;
         float percentage = (float)(y - this.scrollBarBounds.Y) / (float)(this.scrollBarBounds.Height - this.scrollBar.bounds.Height);
         percentage = Utility.Clamp(percentage, 0f, 1f);
-        this.scrollAmount = percentage * (this._contentHeight - this._scissorRectHeight);
+        _scrollbarHelper.SetScrollAmount(percentage * (this._contentHeight - this._scissorRectHeight));
         this.SetScrollBarFromAmount();
         if (y2 != this.scrollBar.bounds.Y)
         {
@@ -522,10 +562,10 @@ public class MyQuestLog : IClickableMenu
     public void UpArrowPressed()
     {
         this.upArrow.scale = this.upArrow.baseScale;
-        this.scrollAmount -= 64f;
-        if (this.scrollAmount < 0f)
+        _scrollbarHelper.DecrementScrollAmountBy(64f);
+        if (_scrollbarHelper.GetScrollAmount() < 0f)
         {
-            this.scrollAmount = 0f;
+            _scrollbarHelper.SetScrollAmountToZero();
         }
         this.SetScrollBarFromAmount();
     }
@@ -533,10 +573,10 @@ public class MyQuestLog : IClickableMenu
     public void DownArrowPressed()
     {
         this.downArrow.scale = this.downArrow.baseScale;
-        this.scrollAmount += 64f;
-        if (this.scrollAmount > this._contentHeight - this._scissorRectHeight)
+        _scrollbarHelper.IncrementScrollAmountBy(64f);
+        if (_scrollbarHelper.GetScrollAmount() > this._contentHeight - this._scissorRectHeight)
         {
-            this.scrollAmount = this._contentHeight - this._scissorRectHeight;
+            _scrollbarHelper.SetScrollAmount(this._contentHeight - this._scissorRectHeight);
         }
         this.SetScrollBarFromAmount();
     }
@@ -577,7 +617,7 @@ public class MyQuestLog : IClickableMenu
                     _questPageManager.SetShownQuest(_questPageManager.GetCurrentPage()[i]);
                     this._objectiveText = _questPageManager.GetShownQuest().GetObjectiveDescriptions();
                     _questPageManager.GetShownQuest().MarkAsViewed();
-                    this.scrollAmount = 0f;
+                    _scrollbarHelper.SetScrollAmountToZero();
                     this.SetScrollBarFromAmount();
                     if (Game1.options.SnappyMenus)
                     {
@@ -652,13 +692,13 @@ public class MyQuestLog : IClickableMenu
         if (this.NeedsScroll())
         {
             if (this.downArrow.containsPoint(x, y)
-                && this.scrollAmount < this._contentHeight - this._scissorRectHeight)
+                && _scrollbarHelper.GetScrollAmount() < this._contentHeight - this._scissorRectHeight)
             {
                 this.DownArrowPressed();
                 Game1.playSound("shwip");
             }
             else if (this.upArrow.containsPoint(x, y)
-                && this.scrollAmount > 0f)
+                && _scrollbarHelper.GetScrollAmount() > 0f)
             {
                 this.UpArrowPressed();
                 Game1.playSound("shwip");
@@ -871,8 +911,8 @@ public class MyQuestLog : IClickableMenu
             ScissorTestEnable = true
         });
         Game1.graphics.GraphicsDevice.ScissorRectangle = scissor_rect;
-        Utility.drawTextWithShadow(b, description, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 64, (float)base.yPositionOnScreen - this.scrollAmount + 96f + extraYOffset), Game1.textColor);
-        float yPos = (float)(base.yPositionOnScreen + 96) + description_size.Y + 32f - this.scrollAmount + extraYOffset;
+        Utility.drawTextWithShadow(b, description, Game1.dialogueFont, new Vector2(base.xPositionOnScreen + 64, (float)base.yPositionOnScreen - _scrollbarHelper.GetScrollAmount() + 96f + extraYOffset), Game1.textColor);
+        float yPos = (float)(base.yPositionOnScreen + 96) + description_size.Y + 32f - _scrollbarHelper.GetScrollAmount() + extraYOffset;
         if (_questPageManager.GetShownQuest().ShouldDisplayAsComplete())
         {
             b.End();
@@ -956,7 +996,7 @@ public class MyQuestLog : IClickableMenu
                         yPos += (float)((bar_background_source.Height + 4) * 4);
                     }
                 }
-                this._contentHeight = yPos + this.scrollAmount - (float)scissor_rect.Y;
+                this._contentHeight = yPos + _scrollbarHelper.GetScrollAmount() - (float)scissor_rect.Y;
             }
             b.End();
             b.GraphicsDevice.ScissorRectangle = cached_scissor_rect;
@@ -967,11 +1007,11 @@ public class MyQuestLog : IClickableMenu
             }
             if (this.NeedsScroll())
             {
-                if (this.scrollAmount > 0f)
+                if (_scrollbarHelper.GetScrollAmount() > 0f)
                 {
                     b.Draw(Game1.staminaRect, new Rectangle(scissor_rect.X, scissor_rect.Top, scissor_rect.Width, 4), Color.Black * 0.15f);
                 }
-                if (this.scrollAmount < this._contentHeight - this._scissorRectHeight)
+                if (_scrollbarHelper.GetScrollAmount() < this._contentHeight - this._scissorRectHeight)
                 {
                     b.Draw(Game1.staminaRect, new Rectangle(scissor_rect.X, scissor_rect.Bottom - 4, scissor_rect.Width, 4), Color.Black * 0.15f);
                 }
