@@ -170,6 +170,31 @@ public class MyQuestLog : IClickableMenu
         }
     }
 
+    private readonly HoverDrawHelper _hoverDrawHelper = new();
+    public class HoverDrawHelper
+    {
+        private string _hoverText = "";
+
+        public void SetHoverText(string text)
+        {
+            _hoverText = text;
+        }
+
+        public void ClearHoverText()
+        {
+            SetHoverText(string.Empty);
+        }
+
+        public void DrawHoverTextIfSet(SpriteBatch b)
+        {
+            if (_hoverText.Length > 0)
+            {
+                IClickableMenu.drawHoverText(b, _hoverText, Game1.dialogueFont);
+            }
+        }
+    }
+
+    
 
 
 
@@ -197,9 +222,7 @@ public class MyQuestLog : IClickableMenu
     public ClickableTextureComponent scrollBar;
     protected bool scrolling;
     public Rectangle scrollBarBounds;
-
-    private string hoverText = "";
-
+    
     public MyQuestLog()
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
@@ -393,7 +416,7 @@ public class MyQuestLog : IClickableMenu
 
     public override void performHoverAction(int x, int y)
     {
-        this.hoverText = "";
+        _hoverDrawHelper.ClearHoverText();
         base.performHoverAction(x, y);
 
         if (_questPageManager.IsNotCurrentQuestOnPageSet())
@@ -408,7 +431,7 @@ public class MyQuestLog : IClickableMenu
         }
         else if (_questPageManager.GetShownQuest().CanBeCancelled() && this.cancelQuestButton.containsPoint(x, y))
         {
-            this.hoverText = Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11364");
+            _hoverDrawHelper.SetHoverText(Game1.content.LoadString("Strings\\StringsFromCSFiles:QuestLog.cs.11364"));
         }
 
         this.forwardButton.tryHover(x, y, 0.2f);
@@ -729,7 +752,7 @@ public class MyQuestLog : IClickableMenu
         base.draw(b);
 
         DrawMousePointer(b);
-        DrawHoverTextIfSet(b);
+        _hoverDrawHelper.DrawHoverTextIfSet(b);
     }
 
     private static void DimBackgroundIfEnabled(SpriteBatch b)
@@ -984,14 +1007,6 @@ public class MyQuestLog : IClickableMenu
     {
         Game1.mouseCursorTransparency = 1f;
         base.drawMouse(b);
-    }
-
-    private void DrawHoverTextIfSet(SpriteBatch b)
-    {
-        if (this.hoverText.Length > 0)
-        {
-            IClickableMenu.drawHoverText(b, this.hoverText, Game1.dialogueFont);
-        }
     }
 
     #endregion
