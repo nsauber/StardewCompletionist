@@ -9,18 +9,38 @@ namespace StardewCompletionist.Menus;
 
 public class TaskListMenu : IClickableMenu
 {
+    private const int OuterMenuBorderWidth = 16;
+
+    private readonly TaskListHelper _taskListHelper;
+
     public TaskListMenu()
         : base(0, 0, 0, 0, showUpperRightCloseButton: true)
     {
-        Game1.dayTimeMoneyBox.DismissQuestPing();
-        Game1.playSound("bigSelect");
-
         // initialize size/positioning values
         base.width = 832;
         base.height = 576;
         Vector2 topLeft = Utility.getTopLeftPositionForCenteringOnScreen(base.width, base.height);
         base.xPositionOnScreen = (int)topLeft.X;
         base.yPositionOnScreen = (int)topLeft.Y + 32;
+
+        _taskListHelper = new(GetCanvassBounds());
+    }
+
+    /// <summary>
+    /// Compute draw-able surface area inside menu border
+    /// </summary>
+    private Rectangle GetCanvassBounds()
+    {
+        var menuBounds = new Rectangle(
+            base.xPositionOnScreen,
+            base.yPositionOnScreen,
+            base.width,
+            base.height);
+        return new Rectangle(
+            menuBounds.X + OuterMenuBorderWidth,
+            menuBounds.Y + OuterMenuBorderWidth,
+            menuBounds.Width - (2 * OuterMenuBorderWidth),
+            menuBounds.Height - (2 * OuterMenuBorderWidth));
     }
 
     public override void draw(SpriteBatch b)
@@ -50,7 +70,7 @@ public class TaskListMenu : IClickableMenu
             Color.White, 4f);
 
 
-        DrawButtonListContents(b, xPos, yPos, w, h);
+        _taskListHelper.DrawButtonListContents(b);
 
 
         base.draw(b);
@@ -59,52 +79,66 @@ public class TaskListMenu : IClickableMenu
         base.drawMouse(b);
     }
 
-    private static void DrawButtonListContents(SpriteBatch b, int xPos, int yPos, int w, int h)
+    public class TaskListHelper
     {
-        // initialize list buttons click-handling
-        var numberOfButtons = 8;
-        var listButtons = new List<ClickableComponent>();
-        for (int i = 0; i < numberOfButtons; i++)
+        private const int NumberOfButtons = 8;
+
+        private readonly Rectangle _canvassBounds;
+        private readonly List<ClickableComponent> _buttonComponents;
+
+        public TaskListHelper(Rectangle canvassBounds)
         {
-            listButtons.Add(
-                new ClickableComponent(
-                    new Rectangle(
-                        xPos + 16,
-                        yPos + 16 + i * ((h - 32) / numberOfButtons),
-                        w - 32,
-                        (h - 32) / numberOfButtons + 4),
-                    i.ToString() ?? "")
-                {
-                    myID = i,
-                    downNeighborID = -7777,
-                    upNeighborID = ((i > 0) ? (i - 1) : (-1)),
-                    rightNeighborID = -7777,
-                    leftNeighborID = -7777,
-                    fullyImmutable = true
-                });
+            _canvassBounds = canvassBounds;            
+            
+            // initialize list of button components
+            _buttonComponents = new List<ClickableComponent>();
+            var buttonHeight = _canvassBounds.Height / NumberOfButtons;
+            for (int i = 0; i < NumberOfButtons; i++)
+            {
+                _buttonComponents.Add(
+                    new ClickableComponent(
+                        new Rectangle(
+                            _canvassBounds.X,
+                            _canvassBounds.Y + (i * buttonHeight),
+                            _canvassBounds.Width,
+                            buttonHeight + 4), // +4 to height so each button overlaps by one "pixel", merging their borders
+                        i.ToString() ?? "")
+                    {
+                        myID = i,
+                        downNeighborID = -7777,
+                        upNeighborID = (i > 0) ? (i - 1) : (-1),
+                        rightNeighborID = -7777,
+                        leftNeighborID = -7777,
+                        fullyImmutable = true
+                    });
+            }
         }
-        for (int i = 0; i < listButtons.Count; i++)
-        {
-            var listButton = listButtons[i];
 
-            // draw per-item frame/background
-            IClickableMenu.drawTextureBox(b,
-                Game1.mouseCursors,
-                new Rectangle(384, 396, 15, 15),
-                listButton.bounds.X, listButton.bounds.Y, listButton.bounds.Width, listButton.bounds.Height,
-                listButton.containsPoint(Game1.getOldMouseX(), Game1.getOldMouseY()) ? Color.Wheat : Color.White,
-                4f, drawShadow: false);
+        public void DrawButtonListContents(SpriteBatch b)
+        {   
+            for (int i = 0; i < _buttonComponents.Count; i++)
+            {
+                var button = _buttonComponents[i];
 
-            // draw item name
-            //SpriteText.drawString(b,
-            //    $"Entry number {i}",
-            //    listButton.bounds.X + 128 + 4, listButton.bounds.Y + 12);
-            Utility.drawTextWithShadow(b,
-                $"Entry number {i}",
-                Game1.dialogueFont,
-                new Vector2(listButton.bounds.X + 128 + 4, listButton.bounds.Y + 12),
-                Game1.textColor);
+                // draw per-item frame/background
+                IClickableMenu.drawTextureBox(b,
+                    Game1.mouseCursors,
+                    new Rectangle(384, 396, 15, 15),
+                    button.bounds.X, button.bounds.Y, button.bounds.Width, button.bounds.Height,
+                    button.containsPoint(Game1.getOldMouseX(), Game1.getOldMouseY()) ? Color.Wheat : Color.White,
+                    4f, drawShadow: false);
 
+                // draw item name
+                //SpriteText.drawString(b,
+                //    $"Entry number {i}",
+                //    button.bounds.X + 128 + 4, button.bounds.Y + 12);
+                Utility.drawTextWithShadow(b,
+                    $"Entry number {i}",
+                    Game1.dialogueFont,
+                    new Vector2(button.bounds.X + 128 + 4, button.bounds.Y + 12),
+                    Game1.textColor);
+
+            }
         }
     }
 }
