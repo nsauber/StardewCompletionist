@@ -23,6 +23,12 @@ public class TaskListMenu : IClickableMenu
         base.xPositionOnScreen = (int)topLeft.X;
         base.yPositionOnScreen = (int)topLeft.Y + 32;
 
+        base.upperRightCloseButton = new ClickableTextureComponent(
+            new Rectangle(base.xPositionOnScreen + base.width - 20, base.yPositionOnScreen - 8, 48, 48),
+            Game1.mouseCursors,
+            new Rectangle(337, 494, 12, 12),
+            4f);
+
         _taskListHelper = new(GetCanvassBounds());
     }
 
