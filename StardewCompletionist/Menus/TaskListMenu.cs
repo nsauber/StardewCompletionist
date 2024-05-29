@@ -91,12 +91,13 @@ public class TaskListMenu : IClickableMenu
 
     public class TaskListHelper
     {
-        private const int NumberOfButtons = 8;
+        private const int NumberOfItemsPerPage = 8;
 
         private readonly TaskDataBuilder _taskDataBuilder;
-
         private readonly Rectangle _canvassBounds;
         private readonly List<ClickableComponent> _buttonComponents;
+
+        private List<List<Tasks.Task>> _pagesOfTasks;
 
         public TaskListHelper(Rectangle canvassBounds)
         {
@@ -105,8 +106,8 @@ public class TaskListMenu : IClickableMenu
             
             // initialize list of button components
             _buttonComponents = new List<ClickableComponent>();
-            var buttonHeight = _canvassBounds.Height / NumberOfButtons;
-            for (int i = 0; i < NumberOfButtons; i++)
+            var buttonHeight = _canvassBounds.Height / NumberOfItemsPerPage;
+            for (int i = 0; i < NumberOfItemsPerPage; i++)
             {
                 _buttonComponents.Add(
                     new ClickableComponent(
@@ -125,13 +126,44 @@ public class TaskListMenu : IClickableMenu
                         fullyImmutable = true
                     });
             }
+
+            RefreshPagination();
+        }
+
+        private void RefreshPagination()
+        {
+            //TODO: replace with logic that actually paginates the list of available tasks
+            var tasksInOrder = GetAvailableTasks().OrderBy(x => x.Name);
+
+            // for each task, put it in an object that also contains it's index in the list
+            var tasksWithIndex = tasksInOrder.Zip(
+                Enumerable.Range(0, tasksInOrder.Count()),
+                (task, index) => new { Index = index, Item = task });
+            var tasksGroupedbyPage = tasksWithIndex
+                .GroupBy(x => x.Index / NumberOfItemsPerPage, x => x.Item);
+
+            _pagesOfTasks = tasksGroupedbyPage
+                .Select(x => x.ToList())
+                .ToList();
+        }
+
+        private IEnumerable<Tasks.Task> GetAvailableTasks()
+        {
+            return _taskDataBuilder.Build()
+                            .GetAllTasks();
+        }
+
+        private IList<Tasks.Task> GetCurrentPageOfTasks()
+        {
+            //TODO: add support in class for navigating multiple pages
+            return _pagesOfTasks[3];
         }
 
         public void DrawButtonListContents(SpriteBatch b)
         {
             var tasks = GetCurrentPageOfTasks();
 
-            for (int i = 0; i < _buttonComponents.Count; i++)
+            for (int i = 0; i < _buttonComponents.Count && i < tasks.Count; i++)
             {
                 var button = _buttonComponents[i];
                 var task = tasks[i];
@@ -164,15 +196,6 @@ public class TaskListMenu : IClickableMenu
 
 
             }
-        }
-
-        private IList<Tasks.Task> GetCurrentPageOfTasks()
-        {
-            //TODO: replace with logic that actually paginates the list of available tasks
-            return _taskDataBuilder.Build()
-                .GetAllTasks()
-                .Take(NumberOfButtons)
-                .ToList();
         }
     }
 }
