@@ -38,6 +38,11 @@ public class TaskData
         var task = GetTask(category, name);
         return _graph.OutEdges(task).Select(x => x.Target);
     }
+
+    public IEnumerable<Task> GetAllTasks()
+    {
+        return _graph.Vertices;
+    }
 }
 
 public class Task

@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StardewValley;
 using StardewValley.Menus;
 using StardewValley.BellsAndWhistles;
+using StardewCompletionist.Tasks;
 
 
 namespace StardewCompletionist.Menus;
@@ -51,11 +52,8 @@ public class TaskListMenu : IClickableMenu
 
     public override void draw(SpriteBatch b)
     {
-        var xPos = base.xPositionOnScreen;
-        var yPos = base.yPositionOnScreen;
-        var w = base.width;
-        var h = base.height;
-
+        //----------------------------------------------------------------
+        // draw common menu header, frame, and other background "chrome"
 
         // draw dimmed background, if enabled
         if (!Game1.options.showClearBackgrounds)
@@ -76,10 +74,16 @@ public class TaskListMenu : IClickableMenu
             Color.White, 4f);
 
 
+        //----------------------------------------------------------------
+        // draw contents appropriate to the current screen/page
+
         _taskListHelper.DrawButtonListContents(b);
 
 
-        base.draw(b);
+        //----------------------------------------------------------------
+        // draw shared buttons and other chrome that should be visible on top of screen contents
+
+        base.draw(b); // handles close button, among other things
 
         Game1.mouseCursorTransparency = 1f;
         base.drawMouse(b);
@@ -89,11 +93,14 @@ public class TaskListMenu : IClickableMenu
     {
         private const int NumberOfButtons = 8;
 
+        private readonly TaskDataBuilder _taskDataBuilder;
+
         private readonly Rectangle _canvassBounds;
         private readonly List<ClickableComponent> _buttonComponents;
 
         public TaskListHelper(Rectangle canvassBounds)
         {
+            _taskDataBuilder = new();
             _canvassBounds = canvassBounds;            
             
             // initialize list of button components
@@ -121,10 +128,13 @@ public class TaskListMenu : IClickableMenu
         }
 
         public void DrawButtonListContents(SpriteBatch b)
-        {   
+        {
+            var tasks = GetCurrentPageOfTasks();
+
             for (int i = 0; i < _buttonComponents.Count; i++)
             {
                 var button = _buttonComponents[i];
+                var task = tasks[i];
 
                 // draw per-item frame/background
                 IClickableMenu.drawTextureBox(b,
@@ -138,13 +148,31 @@ public class TaskListMenu : IClickableMenu
                 //SpriteText.drawString(b,
                 //    $"Entry number {i}",
                 //    button.bounds.X + 128 + 4, button.bounds.Y + 12);
+                //Utility.drawBoldText(b,
+                //    task.Name,
+                //    Game1.dialogueFont,
+                //    new Vector2(button.bounds.X + 128 + 4, button.bounds.Y + 12),
+                //    Game1.textColor);
                 Utility.drawTextWithShadow(b,
-                    $"Entry number {i}",
+                    task.Name,
                     Game1.dialogueFont,
+                    //Game1.smallFont,
+                    //Game1.tinyFont,
                     new Vector2(button.bounds.X + 128 + 4, button.bounds.Y + 12),
                     Game1.textColor);
+                
+
 
             }
+        }
+
+        private IList<Tasks.Task> GetCurrentPageOfTasks()
+        {
+            //TODO: replace with logic that actually paginates the list of available tasks
+            return _taskDataBuilder.Build()
+                .GetAllTasks()
+                .Take(NumberOfButtons)
+                .ToList();
         }
     }
 }
